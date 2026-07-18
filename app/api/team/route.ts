@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import { isGoogleUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const roles = new Set(["admin", "finance", "viewer"]);
+
+async function authorizeAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !isGoogleUser(user)) return false;
+  const { data: profile } = await supabase.from("revenue_profiles").select("role,active").eq("user_id", user.id).maybeSingle();
+  return profile?.active === true && profile.role === "admin";
+}
+
+export async function GET() {
+  if (!await authorizeAdmin()) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const admin = createAdminClient();
+  const [{ data: invites, error: inviteError }, { data: profiles, error: profileError }] = await Promise.all([
+    admin.from("revenue_invited_users").select("email,role,active,invited_at").order("invited_at"),
+    admin.from("revenue_profiles").select("email,display_name,active"),
+  ]);
+  if (inviteError || profileError) return NextResponse.json({ error: inviteError?.message ?? profileError?.message }, { status: 500 });
+  const names = new Map((profiles ?? []).map((profile) => [profile.email.toLowerCase(), profile]));
+  return NextResponse.json({ users: (invites ?? []).map((invite) => ({ ...invite, name: names.get(invite.email.toLowerCase())?.display_name ?? invite.email.split("@")[0], joined: Boolean(names.get(invite.email.toLowerCase())) })) });
+}
+
+export async function POST(request: Request) {
+  if (!await authorizeAdmin()) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const body = await request.json().catch(() => ({}));
+  const role = String(body.role ?? "viewer");
+  const submittedEmails: unknown[] = Array.isArray(body.emails) ? body.emails : [];
+  const emails = [...new Set(submittedEmails.map((email) => String(email).trim().toLowerCase()).filter(Boolean))];
+  if (!roles.has(role) || emails.length === 0 || emails.length > 50 || emails.some((email) => email.length > 254 || !emailPattern.test(email))) return NextResponse.json({ error: "Enter 1–50 valid email addresses and a valid role" }, { status: 400 });
+  const { error } = await createAdminClient().rpc("revenue_upsert_invites", { invite_emails: emails, invite_role: role });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ invited: emails.length });
+}
