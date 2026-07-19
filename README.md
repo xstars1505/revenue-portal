@@ -33,6 +33,8 @@ npx supabase link --project-ref <project-ref>
 npx supabase db push
 ```
 
+6. Configure custom SMTP in Supabase Authentication for reliable invitation email delivery outside the project team.
+
 The migration creates the invite allowlist, user profiles, normalized monthly finance tables, row-level security policies, dashboard query, and the May/June seed data currently shown in the app.
 
 ## Data model

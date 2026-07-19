@@ -33,7 +33,11 @@ export async function POST(request: Request) {
   const submittedEmails: unknown[] = Array.isArray(body.emails) ? body.emails : [];
   const emails = [...new Set(submittedEmails.map((email) => String(email).trim().toLowerCase()).filter(Boolean))];
   if (!roles.has(role) || emails.length === 0 || emails.length > 50 || emails.some((email) => email.length > 254 || !emailPattern.test(email))) return NextResponse.json({ error: "Enter 1–50 valid email addresses and a valid role" }, { status: 400 });
-  const { error } = await createAdminClient().rpc("revenue_upsert_invites", { invite_emails: emails, invite_role: role });
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("revenue_upsert_invites", { invite_emails: emails, invite_role: role });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const deliveries = await Promise.all(emails.map(async (email) => ({ email, error: (await admin.auth.admin.inviteUserByEmail(email, { redirectTo: new URL(request.url).origin })).error })));
+  const failed = deliveries.filter(({ error: inviteError }) => inviteError);
+  if (failed.length) return NextResponse.json({ error: `Access was granted, but ${failed.length} invitation ${failed.length === 1 ? "email" : "emails"} could not be sent: ${failed.map(({ email }) => email).join(", ")}. ${failed[0].error!.message}` }, { status: 502 });
   return NextResponse.json({ invited: emails.length });
 }

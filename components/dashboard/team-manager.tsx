@@ -53,7 +53,7 @@ export function TeamManager() {
     const data = await response.json();
     setSaving(false);
     if (!response.ok) { setError(data.error ?? "Could not add invitations"); return; }
-    setEmails([]); setDraft(""); setMessage(`${data.invited} ${data.invited === 1 ? "account" : "accounts"} added`); setOpen(false); await loadUsers();
+    setEmails([]); setDraft(""); setMessage(`${data.invited} invitation ${data.invited === 1 ? "email" : "emails"} sent`); setOpen(false); await loadUsers();
   }
 
   return <section className="page-section">
@@ -65,7 +65,7 @@ export function TeamManager() {
           <div className="invite-field"><Label>Role</Label><Select value={role} onValueChange={setRole}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="viewer">Viewer</SelectItem><SelectItem value="finance">Finance</SelectItem><SelectItem value="admin">Administrator</SelectItem></SelectContent></Select></div>
           {error && <div className="form-error" role="alert"><WarningCircle size={17} weight="fill" />{error}</div>}
         </div>
-        <DialogFooter className="mx-0 mb-0 px-6"><Button type="submit" disabled={saving}>{saving ? <><SpinnerGap className="spin" />Adding users</> : <><UserPlus />Add to allowlist</>}</Button></DialogFooter>
+        <DialogFooter className="mx-0 mb-0 px-6"><Button type="submit" disabled={saving}>{saving ? <><SpinnerGap className="spin" />Sending invitations</> : <><UserPlus />Send invitations</>}</Button></DialogFooter>
       </form>
     </DialogContent></Dialog></div>
     {message && <div className="invite-success" role="status"><Check size={16} weight="bold" />{message}</div>}
