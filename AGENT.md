@@ -47,7 +47,7 @@ Use `codegraph sync` after edits and `codegraph status` to check the index. The 
 - `lib/store.ts`: local demo data and in-memory auth fallback only
 - `lib/supabase/`: browser, server, admin, configuration, and session clients
 - `supabase/migrations/`: schema, seed data, RLS, RPCs, and invite migrations
-- `app/globals.css`: the current visual system and application layout styles
+- `app/globals.css`: framework imports, shared theme tokens, and document-level base/accessibility rules only
 
 ## Runtime flow
 
@@ -93,8 +93,16 @@ Make schema changes as new timestamped SQL files in `supabase/migrations/`. Do n
 
 - Each sidebar item is a real App Router route.
 - Keep the shared shell in the dashboard layout; route-specific content belongs in its page.
-- Use existing shadcn components from `components/ui` and Phosphor icons before introducing dependencies.
-- Match the existing restrained editorial dashboard style in `app/globals.css`.
+- Reuse the shadcn primitives in `components/ui` before building controls or adding UI dependencies; add a missing primitive through the shadcn generator instead of hand-copying it.
+- Customize shadcn components at the call site with their existing props, variants, sizes, and Tailwind `className`. Use `cn` for conditional classes and add a CVA variant only when multiple consumers share it.
+- Keep `components/ui` generic. Feature-specific layout and branding belong in the consuming component, not in a shared primitive or global selector; use CodeGraph to inspect every consumer before changing primitive defaults.
+- Preserve shadcn/Radix semantics, forwarded props, `data-slot` hooks, keyboard behavior, focus states, and ARIA relationships. Do not replace an accessible primitive with a styled native wrapper.
+- Avoid one-off wrapper components that only rename a shadcn primitive or hard-code one `className`; compose directly unless the wrapper adds shared behavior.
+- Use Phosphor icons before introducing another icon dependency.
+- Use Tailwind utility classes in the owning component first. Do not add component or page selectors to `app/globals.css`.
+- When utilities are genuinely unsuitable, use a colocated CSS Module so selectors remain scoped to the component.
+- Keep `app/globals.css` limited to framework imports, shared design tokens, document-level base styles, theme variants, and global accessibility behavior.
+- Before moving or deleting shared styles, use CodeGraph to trace every consumer and remove selectors that have no live use.
 - Preserve keyboard access, labels, focus states, and responsive behavior.
 - The reporting-period combobox is shared by dashboard routes and should default to the current complete month, or the latest complete month when the current month is unavailable.
 

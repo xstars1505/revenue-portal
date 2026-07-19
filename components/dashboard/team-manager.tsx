@@ -154,11 +154,13 @@ export function TeamManager() {
   }
 
   return (
-    <section className="page-section">
-      <div className="section-copy team-heading">
+    <section className="py-9">
+      <div className="mb-6 flex items-end justify-between gap-[18px] [&>div]:min-w-0">
         <div>
-          <h2>Approved access</h2>
-          <p>Invite Google accounts and assign their portal role.</p>
+          <h2 className="mb-2 text-2xl tracking-[-0.04em]">Approved access</h2>
+          <p className="leading-[1.6] text-[#777b73]">
+            Invite Google accounts and assign their portal role.
+          </p>
         </div>
         <Dialog
           open={open}
@@ -183,18 +185,23 @@ export function TeamManager() {
                 Add up to 50 Google accounts at once.
               </DialogDescription>
             </DialogHeader>
-            <form className="invite-dialog-form" onSubmit={invite}>
-              <div className="invite-dialog-fields">
-                <div className="invite-field">
+            <form className="grid gap-0" onSubmit={invite}>
+              <div className="grid gap-[18px] px-6 pt-1 pb-6">
+                <div className="grid gap-2">
                   <Label htmlFor="invite-emails">Google account emails</Label>
                   <div
-                    className="email-chip-input"
+                    className="flex min-h-[78px] cursor-text content-start items-start flex-wrap gap-1.5 rounded-lg border border-input bg-white p-[9px] transition-[border-color,box-shadow] duration-150 focus-within:border-ring focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--ring)_25%,transparent)]"
                     onClick={() => inputRef.current?.focus()}
                   >
                     {emails.map((email) => (
-                      <Badge variant="secondary" key={email}>
+                      <Badge
+                        className="h-6 max-w-full bg-[#e8f0ea] pl-[9px] text-[#365247]"
+                        variant="secondary"
+                        key={email}
+                      >
                         {email}
                         <button
+                          className="mr-[-5px] grid size-[17px] place-items-center rounded-full border-0 bg-transparent text-[#6d8177] hover:bg-[#f6deda] hover:text-[#8e3f3a]"
                           type="button"
                           aria-label={`Remove ${email}`}
                           onClick={() =>
@@ -209,6 +216,7 @@ export function TeamManager() {
                     ))}
                     <Input
                       ref={inputRef}
+                      className="h-[22px] w-auto min-w-[150px] flex-1 rounded-none border-0 bg-transparent px-[3px] text-xs shadow-none outline-0 focus-visible:ring-0 focus-visible:outline-0"
                       id="invite-emails"
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
@@ -234,12 +242,12 @@ export function TeamManager() {
                       autoComplete="off"
                     />
                   </div>
-                  <small>
+                  <small className="text-[9px] leading-[1.5] text-[#92968f]">
                     Press Enter or paste multiple addresses. Each user must sign
                     in through Google.
                   </small>
                 </div>
-                <div className="invite-field">
+                <div className="grid gap-2">
                   <Label>Role</Label>
                   <Select value={role} onValueChange={setRole}>
                     <SelectTrigger className="w-full">
@@ -253,7 +261,10 @@ export function TeamManager() {
                   </Select>
                 </div>
                 {error && (
-                  <div className="form-error" role="alert">
+                  <div
+                    className="flex items-center gap-2 rounded-[7px] bg-[#fdeceb] px-3 py-[11px] text-[13px] text-[#8c3935]"
+                    role="alert"
+                  >
                     <WarningCircle size={17} weight="fill" />
                     {error}
                   </div>
@@ -263,7 +274,7 @@ export function TeamManager() {
                 <Button type="submit" disabled={saving}>
                   {saving ? (
                     <>
-                      <SpinnerGap className="spin" />
+                      <SpinnerGap className="animate-spin" />
                       Sending invitations
                     </>
                   ) : (
@@ -279,27 +290,36 @@ export function TeamManager() {
         </Dialog>
       </div>
       {message && (
-        <div className="invite-success" role="status">
+        <div
+          className="mb-3 flex w-fit items-center gap-[7px] rounded-[7px] bg-[#eaf3ed] px-3 py-[11px] text-[11px] text-[#356248]"
+          role="status"
+        >
           <Check size={16} weight="bold" />
           {message}
         </div>
       )}
       {error && !open && (
-        <div className="form-error" role="alert">
+        <div
+          className="flex items-center gap-2 rounded-[7px] bg-[#fdeceb] px-3 py-[11px] text-[13px] text-[#8c3935]"
+          role="alert"
+        >
           <WarningCircle size={17} weight="fill" />
           {error}
         </div>
       )}
-      <div className="panel team-list">
+      <div className="rounded-[10px] border border-[#e6e7e1] bg-white">
         {loading ? (
-          <div className="team-loading">
-            <SpinnerGap className="spin" size={18} />
+          <div className="flex min-h-[90px] items-center justify-center gap-3 px-[18px] py-4 text-[11px] text-[#858982]">
+            <SpinnerGap className="animate-spin" size={18} />
             Loading access list
           </div>
         ) : (
           users.map((user) => (
-            <div key={user.email}>
-              <span className="avatar">
+            <div
+              className="flex items-center gap-3 border-b border-[#e6e7e1] px-[18px] py-4 last:border-b-0"
+              key={user.email}
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-[7px] bg-[#dcebe1] text-[10px] font-bold text-[#315442]">
                 {user.name
                   .split(" ")
                   .map((part) => part[0])
@@ -307,13 +327,17 @@ export function TeamManager() {
                   .slice(0, 2)
                   .toUpperCase()}
               </span>
-              <div>
-                <strong>{user.name}</strong>
-                <span>{user.email}</span>
+              <div className="grid flex-1 gap-[3px]">
+                <strong className="text-xs">{user.name}</strong>
+                <span className="text-[10px] text-[#8d918a]">{user.email}</span>
               </div>
-              <b>{user.role}</b>
-              <span className="team-status">
-                <span className={user.joined ? "status-badge" : "muted-badge"}>
+              <b className="text-[10px] font-medium text-[#60655e]">
+                {user.role}
+              </b>
+              <span className="flex w-12 justify-end">
+                <span
+                  className={`inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-1.5 py-1 text-[8px] ${user.joined ? "bg-[#e9f2ec] font-semibold text-[#3e6d52]" : "bg-[#efefeb] text-[#777b74]"}`}
+                >
                   {user.joined ? (
                     <>
                       <Check size={12} /> Active
@@ -323,10 +347,10 @@ export function TeamManager() {
                   )}
                 </span>
               </span>
-              <span className="team-action">
+              <span className="grid w-6 shrink-0 place-items-center">
                 {user.role !== "admin" && (
                   <Button
-                    className="pending-remove"
+                    className="bg-transparent text-[#a0a39d] transition-[color,background,transform] duration-150 hover:bg-[#f8efed] hover:text-[#8d4b46] active:scale-[0.92] [&_svg]:size-[13px]"
                     type="button"
                     variant="ghost"
                     size="icon-xs"
@@ -336,7 +360,7 @@ export function TeamManager() {
                     title={`Remove ${user.joined ? "user" : "invitation"}`}
                   >
                     {removing === user.email ? (
-                      <SpinnerGap className="spin" />
+                      <SpinnerGap className="animate-spin" />
                     ) : (
                       <Trash weight="regular" />
                     )}
