@@ -12,9 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     return NextResponse.json(await syncRevenueFolder());
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Drive sync failed" },
-      { status: 500 },
-    );
+    console.error("Scheduled Drive sync failed", error);
+    return NextResponse.json({ error: "Drive sync failed" }, { status: 500 });
   }
 }

@@ -1,7 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 
 export type User = { email: string; name: string; role: string };
-type StoredUser = User & { password: string };
 
 export type RevenueMonth = {
   month: string;
@@ -11,16 +10,14 @@ export type RevenueMonth = {
   source: string;
 };
 
-export const users: StoredUser[] = [
+const users: User[] = [
   {
     email: "minh@ledgerly.app",
-    password: "revenue2026",
     name: "Minh Nguyen",
     role: "Administrator",
   },
   {
     email: "finance@ledgerly.app",
-    password: "revenue2026",
     name: "Lan Tran",
     role: "Finance",
   },
@@ -130,13 +127,17 @@ export const report = {
 };
 
 export function authenticate(email: string, password: string): User | null {
-  const match = users.find(
-    (user) =>
-      user.email === email.trim().toLowerCase() && user.password === password,
+  const expected = process.env.DEMO_PASSWORD;
+  if (
+    process.env.NODE_ENV === "production" ||
+    !expected ||
+    Buffer.byteLength(password) !== Buffer.byteLength(expected) ||
+    !timingSafeEqual(Buffer.from(password), Buffer.from(expected))
+  )
+    return null;
+  return (
+    users.find((user) => user.email === email.trim().toLowerCase()) ?? null
   );
-  return match
-    ? { email: match.email, name: match.name, role: match.role }
-    : null;
 }
 
 export function createSession(user: User) {

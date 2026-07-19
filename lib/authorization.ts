@@ -11,10 +11,15 @@ export async function authorizeRevenueUser(
   if (!user || !isGoogleUser(user)) return null;
   const { data: profile } = await supabase
     .from("revenue_profiles")
-    .select("role,active")
+    .select("display_name,role,active")
     .eq("user_id", user.id)
     .maybeSingle();
   return profile?.active && roles.includes(profile.role)
-    ? { user, role: profile.role }
+    ? {
+        user,
+        name: profile.display_name,
+        role: profile.role,
+        supabase,
+      }
     : null;
 }

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { months, report, sessions, type RevenueMonth } from "@/lib/store";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
-import { isGoogleUser } from "@/lib/auth";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/supabase/config";
+import { authorizeRevenueUser } from "@/lib/authorization";
 
 function localAuthorized(request: NextRequest) {
   return sessions.has(request.cookies.get("ledgerly_session")?.value ?? "");
@@ -18,12 +17,10 @@ const monthLabel = (value: string) =>
 
 export async function GET(request: NextRequest) {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !isGoogleUser(user))
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const authorized = await authorizeRevenueUser();
+    if (!authorized)
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { supabase } = authorized;
     const requestedMonth = request.nextUrl.searchParams.get("month");
     const requestedComparison = request.nextUrl.searchParams.get("compare");
     if (
@@ -41,8 +38,13 @@ export async function GET(request: NextRequest) {
       )
       .eq("branch", "Central branch")
       .order("report_month");
-    if (rowsError)
-      return NextResponse.json({ error: rowsError.message }, { status: 500 });
+    if (rowsError) {
+      console.error("Could not load reporting periods", rowsError);
+      return NextResponse.json(
+        { error: "Could not load reporting periods" },
+        { status: 500 },
+      );
+    }
     const actualRows = (rows ?? []).filter((row) => row.scenario === "actual");
     const completePeriods = actualRows.map((row, index) => ({
       value: row.report_month,
@@ -65,11 +67,11 @@ export async function GET(request: NextRequest) {
       "revenue_dashboard_report",
       { primary_month: primaryMonth, comparison_month: comparisonMonth },
     );
-    if (dashboardError || !dashboard)
-      return NextResponse.json(
-        { error: dashboardError?.message ?? "Report not found" },
-        { status: 404 },
-      );
+    if (dashboardError || !dashboard) {
+      if (dashboardError)
+        console.error("Could not load dashboard report", dashboardError);
+      return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    }
     const normalizedMonths = actualRows.map((row) => {
       const sourceFiles = row.revenue_source_files as
         { file_name: string } | { file_name: string }[] | null;
@@ -91,6 +93,11 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (!isDemoMode)
+    return NextResponse.json(
+      { error: "Data service is not configured" },
+      { status: 503 },
+    );
   if (!localAuthorized(request))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({
@@ -106,6 +113,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Workbook imports must use the server importer" },
       { status: 501 },
+    );
+  if (!isDemoMode)
+    return NextResponse.json(
+      { error: "Data service is not configured" },
+      { status: 503 },
     );
   if (!localAuthorized(request))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

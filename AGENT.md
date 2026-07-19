@@ -56,7 +56,7 @@ Use `codegraph sync` after edits and `codegraph status` to check the index. The 
 3. A database trigger creates or updates `revenue_profiles` from the matching invitation.
 4. `DashboardProvider` calls `/api/auth`, then `/api/revenue`.
 5. `/api/revenue` selects the requested complete month, chooses the preceding month for comparison, and calls `revenue_dashboard_report`.
-6. Without Supabase variables, the app uses the in-memory demo users and report in `lib/store.ts`.
+6. Outside production, missing Supabase variables enable the in-memory demo users and report in `lib/store.ts`; `DEMO_PASSWORD` must also be set for local password login. Production fails closed when Supabase is not configured.
 
 Do not extend the local fallback as a production data path. Production finance data belongs in Supabase.
 
@@ -114,6 +114,7 @@ Start from `.env.example`. Required Supabase variables are:
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY
+NEXT_PUBLIC_APP_URL
 ```
 
 Drive ingestion uses:

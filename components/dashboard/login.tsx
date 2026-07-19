@@ -17,10 +17,11 @@ const SUPABASE_ENABLED = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
+const DEMO_ENABLED = process.env.NODE_ENV !== "production" && !SUPABASE_ENABLED;
 
 export function Login({ onLogin }: { onLogin: (user: User) => void }) {
-  const [email, setEmail] = useState("baminh.letran@gmail.com");
-  const [password, setPassword] = useState("revenue2026");
+  const [email, setEmail] = useState("minh@ledgerly.app");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +46,9 @@ export function Login({ onLogin }: { onLogin: (user: User) => void }) {
     const supabase = createBrowserSupabaseClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
+      },
     });
     if (oauthError) setError(oauthError.message);
   }
@@ -108,7 +111,7 @@ export function Login({ onLogin }: { onLogin: (user: User) => void }) {
               </span>
             )}
           </button>
-          {!SUPABASE_ENABLED && (
+          {DEMO_ENABLED && (
             <>
               <div className="my-6 flex items-center gap-3 text-xs text-[#979a94] before:h-px before:flex-1 before:bg-[#e6e7e1] before:content-[''] after:h-px after:flex-1 after:bg-[#e6e7e1] after:content-['']">
                 <span>Demo access</span>
