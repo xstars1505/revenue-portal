@@ -12,8 +12,18 @@ export type RevenueMonth = {
 };
 
 export const users: StoredUser[] = [
-  { email: "minh@ledgerly.app", password: "revenue2026", name: "Minh Nguyen", role: "Administrator" },
-  { email: "finance@ledgerly.app", password: "revenue2026", name: "Lan Tran", role: "Finance" },
+  {
+    email: "minh@ledgerly.app",
+    password: "revenue2026",
+    name: "Minh Nguyen",
+    role: "Administrator",
+  },
+  {
+    email: "finance@ledgerly.app",
+    password: "revenue2026",
+    name: "Lan Tran",
+    role: "Finance",
+  },
 ];
 
 const seedMonths: RevenueMonth[] = [
@@ -32,8 +42,11 @@ const globalStore = globalThis as typeof globalThis & {
   ledgerlySessions?: Map<string, User>;
 };
 
-export const months = globalStore.ledgerlyMonths ??= [...seedMonths];
-export const sessions = globalStore.ledgerlySessions ??= new Map<string, User>();
+export const months = (globalStore.ledgerlyMonths ??= [...seedMonths]);
+export const sessions = (globalStore.ledgerlySessions ??= new Map<
+  string,
+  User
+>());
 
 export const report = {
   period: "June 2026",
@@ -89,14 +102,25 @@ export const report = {
     { name: "New purchases", current: 19733760, previous: 14504150 },
   ],
   topProducts: [
-    { code: "B04", name: "Heineken Silver 250ml", units: 4616, revenue: 96885600 },
+    {
+      code: "B04",
+      name: "Heineken Silver 250ml",
+      units: 4616,
+      revenue: 96885600,
+    },
     { code: "B08", name: "Tiger Silver 250ml", units: 4910, revenue: 93290000 },
     { code: "B07", name: "Tiger Silver 330ml", units: 2779, revenue: 69475000 },
     { code: "MC04", name: "Crispy taro squid", units: 506, revenue: 59761800 },
-    { code: "B03", name: "Heineken Silver 330ml", units: 2102, revenue: 56664900 },
+    {
+      code: "B03",
+      name: "Heineken Silver 330ml",
+      units: 2102,
+      revenue: 56664900,
+    },
   ],
   review: {
-    summary: "Revenue stayed near May levels, but approximately ₫100M of additional costs compressed profit.",
+    summary:
+      "Revenue stayed near May levels, but approximately ₫100M of additional costs compressed profit.",
     actions: [
       "Review beer purchasing and inventory carryover.",
       "Stabilize kitchen staffing and service time.",
@@ -106,8 +130,13 @@ export const report = {
 };
 
 export function authenticate(email: string, password: string): User | null {
-  const match = users.find((user) => user.email === email.trim().toLowerCase() && user.password === password);
-  return match ? { email: match.email, name: match.name, role: match.role } : null;
+  const match = users.find(
+    (user) =>
+      user.email === email.trim().toLowerCase() && user.password === password,
+  );
+  return match
+    ? { email: match.email, name: match.name, role: match.role }
+    : null;
 }
 
 export function createSession(user: User) {

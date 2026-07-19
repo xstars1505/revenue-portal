@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import type { PeriodOption, Report, RevenueMonth, User } from "@/lib/dashboard";
 
 type DashboardContextValue = {
@@ -29,7 +36,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const loadRevenue = useCallback(async (month?: string) => {
     setLoadingPeriod(true);
-    const response = await fetch(month ? `/api/revenue?month=${encodeURIComponent(month)}` : "/api/revenue");
+    const response = await fetch(
+      month
+        ? `/api/revenue?month=${encodeURIComponent(month)}`
+        : "/api/revenue",
+    );
     if (response.ok) {
       const data = await response.json();
       setMonths(data.months);
@@ -41,24 +52,51 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetch("/api/auth").then(async (response) => {
-      if (!response.ok) return;
-      setUser((await response.json()).user);
-      await loadRevenue();
-    }).finally(() => setReady(true));
+    fetch("/api/auth")
+      .then(async (response) => {
+        if (!response.ok) return;
+        setUser((await response.json()).user);
+        await loadRevenue();
+      })
+      .finally(() => setReady(true));
   }, [loadRevenue]);
 
-  async function login(nextUser: User) { setUser(nextUser); await loadRevenue(); }
+  async function login(nextUser: User) {
+    setUser(nextUser);
+    await loadRevenue();
+  }
   async function logout() {
     await fetch("/api/auth", { method: "DELETE" });
-    setUser(null); setMonths([]); setPeriods([]); setSelectedMonth(""); setReport(null);
+    setUser(null);
+    setMonths([]);
+    setPeriods([]);
+    setSelectedMonth("");
+    setReport(null);
   }
 
-  return <DashboardContext value={{ user, report, months, periods, selectedMonth, ready, loadingPeriod, login, logout, loadRevenue }}>{children}</DashboardContext>;
+  return (
+    <DashboardContext
+      value={{
+        user,
+        report,
+        months,
+        periods,
+        selectedMonth,
+        ready,
+        loadingPeriod,
+        login,
+        logout,
+        loadRevenue,
+      }}
+    >
+      {children}
+    </DashboardContext>
+  );
 }
 
 export function useDashboard() {
   const context = useContext(DashboardContext);
-  if (!context) throw new Error("useDashboard must be used inside DashboardProvider");
+  if (!context)
+    throw new Error("useDashboard must be used inside DashboardProvider");
   return context;
 }

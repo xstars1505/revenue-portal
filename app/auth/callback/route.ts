@@ -11,13 +11,19 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) return NextResponse.redirect(`${origin}/?error=oauth`);
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user || !isGoogleUser(user)) {
     await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/?error=google_required`);
   }
 
-  const { data: invite } = await supabase.from("revenue_invited_users").select("email").eq("active", true).maybeSingle();
+  const { data: invite } = await supabase
+    .from("revenue_invited_users")
+    .select("email")
+    .eq("active", true)
+    .maybeSingle();
   if (!invite) {
     await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/?error=not_invited`);

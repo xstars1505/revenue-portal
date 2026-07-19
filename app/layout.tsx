@@ -6,7 +6,9 @@ export const metadata: Metadata = {
   description: "Private revenue reporting for invited teams.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body>{children}</body>

@@ -14,38 +14,76 @@ test("parses labeled actuals, plan, month, and products", async () => {
   report.addRow(["Chi phí hoạt động", 200, 180]);
   report.addRow(["Lợi nhuận sau thuế", 350, 280]);
   const sales = workbook.addWorksheet("LINK DỮ LIỆU");
-  sales.addRow(["Mã hàng", "Tên hàng", "SL bán", "Doanh thu", "SL trả", "Giá trị trả", "Doanh thu thuần"]);
+  sales.addRow([
+    "Mã hàng",
+    "Tên hàng",
+    "SL bán",
+    "Doanh thu",
+    "SL trả",
+    "Giá trị trả",
+    "Doanh thu thuần",
+  ]);
   sales.addRow(["B04", "Beer", 2, 100, 0, 0, 100]);
-  const parsed = await parseRevenueWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()));
+  const parsed = await parseRevenueWorkbook(
+    Buffer.from(await workbook.xlsx.writeBuffer()),
+  );
   assert.equal(parsed.reportMonth, "2026-06-01");
   assert.equal(parsed.actual.ebitda, 400);
   assert.equal(parsed.plan?.revenue, 900);
-  assert.deepEqual(parsed.products.map(({ code, netRevenue }) => ({ code, netRevenue })), [{ code: "B04", netRevenue: 100 }]);
+  assert.deepEqual(
+    parsed.products.map(({ code, netRevenue }) => ({ code, netRevenue })),
+    [{ code: "B04", netRevenue: 100 }],
+  );
 });
 
 test("parses the Vietnamese KET QUA KINH DOANH layout", async () => {
   const workbook = new ExcelJS.Workbook();
   const report = workbook.addWorksheet("KET QUA KINH DOANH");
   report.getCell("A1").value = "Từ ngày 01/06/2026 đến ngày 30/06/2026";
-  report.getCell("B2").value = "Tổng doanh thu/ tháng"; report.getCell("C2").value = 1000;
-  report.getCell("B3").value = "Tổng doanh thu/ ngày"; report.getCell("C3").value = 40;
-  report.getCell("B4").value = "Tổng số bàn bán được/ tháng"; report.getCell("C4").value = 10;
-  report.getCell("B6").value = "Tổng doanh thu/ bàn"; report.getCell("C6").value = 100;
-  ["Đồ uống", "Đồ ăn chính", "Khác"].forEach((name, index) => { report.getRow(7).getCell(index + 3).value = name; });
-  [500, 400, 100].forEach((value, index) => { report.getRow(8).getCell(index + 3).value = value; });
-  [200, 160, 40].forEach((value, index) => { report.getRow(10).getCell(index + 3).value = value; });
-  report.getCell("B12").value = "Gross Profit (lãi gộp)"; report.getCell("F12").value = 600;
-  report.getCell("B13").value = "COL - Payroll"; report.getCell("C13").value = 200;
-  report.getCell("B14").value = "Total"; report.getCell("C14").value = 200;
-  report.getCell("B15").value = "EBITDA"; report.getCell("C15").value = 400;
-  report.getCell("B16").value = "THUẾ KINH DOANH"; report.getCell("C16").value = 50;
-  report.getCell("B17").value = "PAX (lợi nhuận sau thuế)"; report.getCell("C17").value = 350;
+  report.getCell("B2").value = "Tổng doanh thu/ tháng";
+  report.getCell("C2").value = 1000;
+  report.getCell("B3").value = "Tổng doanh thu/ ngày";
+  report.getCell("C3").value = 40;
+  report.getCell("B4").value = "Tổng số bàn bán được/ tháng";
+  report.getCell("C4").value = 10;
+  report.getCell("B6").value = "Tổng doanh thu/ bàn";
+  report.getCell("C6").value = 100;
+  ["Đồ uống", "Đồ ăn chính", "Khác"].forEach((name, index) => {
+    report.getRow(7).getCell(index + 3).value = name;
+  });
+  [500, 400, 100].forEach((value, index) => {
+    report.getRow(8).getCell(index + 3).value = value;
+  });
+  [200, 160, 40].forEach((value, index) => {
+    report.getRow(10).getCell(index + 3).value = value;
+  });
+  report.getCell("B12").value = "Gross Profit (lãi gộp)";
+  report.getCell("F12").value = 600;
+  report.getCell("B13").value = "COL - Payroll";
+  report.getCell("C13").value = 200;
+  report.getCell("B14").value = "Total";
+  report.getCell("C14").value = 200;
+  report.getCell("B15").value = "EBITDA";
+  report.getCell("C15").value = 400;
+  report.getCell("B16").value = "THUẾ KINH DOANH";
+  report.getCell("C16").value = 50;
+  report.getCell("B17").value = "PAX (lợi nhuận sau thuế)";
+  report.getCell("C17").value = 350;
   const review = workbook.addWorksheet("REVIEW");
-  review.addRow(["THỰC TẾ", "Strong month"]); review.addRow(["ĐỀ XUẤT", "Keep monitoring costs"]);
-  const parsed = await parseRevenueWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()));
+  review.addRow(["THỰC TẾ", "Strong month"]);
+  review.addRow(["ĐỀ XUẤT", "Keep monitoring costs"]);
+  const parsed = await parseRevenueWorkbook(
+    Buffer.from(await workbook.xlsx.writeBuffer()),
+  );
   assert.equal(parsed.actual.revenue, 1000);
   assert.equal(parsed.actual.netProfit, 350);
   assert.equal(parsed.categories.length, 3);
-  assert.deepEqual(parsed.expenses.map(({ code, amount }) => ({ code, amount })), [{ code: "payroll", amount: 200 }]);
-  assert.deepEqual(parsed.review, { summary: "Strong month", actions: ["Keep monitoring costs"] });
+  assert.deepEqual(
+    parsed.expenses.map(({ code, amount }) => ({ code, amount })),
+    [{ code: "payroll", amount: 200 }],
+  );
+  assert.deepEqual(parsed.review, {
+    summary: "Strong month",
+    actions: ["Keep monitoring costs"],
+  });
 });
