@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Check, SpinnerGap, UserPlus, WarningCircle, X } from "@phosphor-icons/react";
+import { Check, SpinnerGap, Trash, UserPlus, WarningCircle, X } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -20,6 +20,7 @@ export function TeamManager() {
   const [role, setRole] = useState("viewer");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
@@ -52,8 +53,22 @@ export function TeamManager() {
     const response = await fetch("/api/team", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ emails: inviteEmails, role }) });
     const data = await response.json();
     setSaving(false);
-    if (!response.ok) { setError(data.error ?? "Could not add invitations"); return; }
+    if (!response.ok) {
+      if (data.invited) { setEmails(data.failed ?? []); setDraft(""); await loadUsers(); }
+      setError(data.error ?? "Could not add invitations"); return;
+    }
     setEmails([]); setDraft(""); setMessage(`${data.invited} invitation ${data.invited === 1 ? "email" : "emails"} sent`); setOpen(false); await loadUsers();
+  }
+
+  async function removeUser(user: Invite) {
+    const description = user.joined ? `${user.email} will immediately lose portal access.` : `The pending invitation for ${user.email} will be cancelled.`;
+    if (!window.confirm(`Remove ${user.email}?\n\n${description}`)) return;
+    setError(""); setMessage(""); setRemoving(user.email);
+    const response = await fetch(`/api/team?email=${encodeURIComponent(user.email)}`, { method: "DELETE" });
+    const data = await response.json();
+    setRemoving("");
+    if (!response.ok) { setError(data.error ?? "Could not remove invitation"); return; }
+    setUsers((current) => current.filter((item) => item.email !== user.email)); setMessage(user.joined ? "User removed" : "Pending invitation removed");
   }
 
   return <section className="page-section">
@@ -69,6 +84,7 @@ export function TeamManager() {
       </form>
     </DialogContent></Dialog></div>
     {message && <div className="invite-success" role="status"><Check size={16} weight="bold" />{message}</div>}
-    <div className="panel team-list">{loading ? <div className="team-loading"><SpinnerGap className="spin" size={18} />Loading access list</div> : users.map((user) => <div key={user.email}><span className="avatar">{user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><strong>{user.name}</strong><span>{user.email}</span></div><b>{user.role}</b><span className={user.joined ? "status-badge" : "muted-badge"}>{user.joined ? <><Check size={12} /> Active</> : "Invited"}</span></div>)}</div>
+    {error && !open && <div className="form-error" role="alert"><WarningCircle size={17} weight="fill" />{error}</div>}
+    <div className="panel team-list">{loading ? <div className="team-loading"><SpinnerGap className="spin" size={18} />Loading access list</div> : users.map((user) => <div key={user.email}><span className="avatar">{user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><strong>{user.name}</strong><span>{user.email}</span></div><b>{user.role}</b><span className="team-status"><span className={user.joined ? "status-badge" : "muted-badge"}>{user.joined ? <><Check size={12} /> Active</> : "Invited"}</span></span><span className="team-action">{user.role !== "admin" && <Button className="pending-remove" type="button" variant="ghost" size="icon-xs" disabled={removing === user.email} onClick={() => removeUser(user)} aria-label={`Remove ${user.email}`} title={`Remove ${user.joined ? "user" : "invitation"}`}>{removing === user.email ? <SpinnerGap className="spin" /> : <Trash weight="regular" />}</Button>}</span></div>)}</div>
   </section>;
 }
