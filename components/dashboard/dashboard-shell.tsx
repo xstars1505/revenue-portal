@@ -32,7 +32,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <nav aria-label="Main navigation">{navigation.filter((item) => item.href !== "/team" || user.role === "admin").map(({ href, label, Icon }) => {
         const active = pathname === href;
         return <Link href={href} key={href} className={active ? "active" : ""}><Icon size={19} weight={active ? "fill" : "regular"} />{label}</Link>;
-      })}</nav>
+      })}<button className="mobile-logout" onClick={logout}><SignOut size={19} />Sign out</button></nav>
       <div className="sidebar-spacer" />
       <div className="drive-card"><div className="drive-head"><span><Receipt size={18} weight="fill" /></span><div><strong>{periodName} P&amp;L</strong><small>{report.source}</small></div></div><div className="drive-status"><span /> Workbook mapped</div></div>
       <div className="user-row"><div className="avatar">{user.name.split(" ").map((part) => part[0]).join("")}</div><div><strong>{user.name}</strong><small>{user.role}</small></div><button aria-label="Sign out" onClick={logout}><SignOut size={18} /></button></div>
