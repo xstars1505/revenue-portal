@@ -1,0 +1,47 @@
+name: Database backup
+
+on:
+  schedule:
+    - cron: "17 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Export production database
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_BACKUP_DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL"
+          docker run --rm -e DATABASE_URL postgres:17 \
+            pg_dump --dbname="$DATABASE_URL" --format=custom --no-owner --no-privileges \
+            > revenue-portal.dump
+
+      - name: Encrypt backup
+        env:
+          BACKUP_PUBLIC_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAd1rMxzH00WAQqU91qW/EbSWtQs6uFuyQSEgJrIemXA
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes age
+          age --recipient "$BACKUP_PUBLIC_KEY" --output revenue-portal.dump.age revenue-portal.dump
+          shred --remove revenue-portal.dump
+          sha256sum revenue-portal.dump.age > revenue-portal.dump.age.sha256
+
+      - name: Store encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: revenue-portal-backup-${{ github.run_id }}
+          path: |
+            revenue-portal.dump.age
+            revenue-portal.dump.age.sha256
+          retention-days: 14
+          if-no-files-found: error

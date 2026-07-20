@@ -1,0 +1,82 @@
+name: Production monitor
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-monitor
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public site and protected APIs
+        id: monitor
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="https://revenue-portal-six.vercel.app"
+          test "$(curl --silent --show-error --location --output /dev/null --write-out '%{http_code}' "$origin/")" = "200"
+          for path in auth revenue team; do
+            test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$origin/api/$path")" = "403"
+          done
+          headers="$(curl --silent --show-error --head "$origin/api/auth")"
+          grep -qi '^cache-control: no-store' <<< "$headers"
+          grep -qi '^strict-transport-security:' <<< "$headers"
+          grep -qi '^x-content-type-options: nosniff' <<< "$headers"
+
+      - name: Update production alert
+        if: always()
+        uses: actions/github-script@v8
+        env:
+          MONITOR_OUTCOME: ${{ steps.monitor.outcome }}
+        with:
+          script: |
+            const title = "[alert] Production security monitor failed";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (process.env.MONITOR_OUTCOME === "success") {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `Recovered in workflow run ${context.runId}.`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: "closed",
+                });
+              }
+              return;
+            }
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `The monitor failed again in workflow run ${context.runId}.`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                assignees: [context.repo.owner],
+                body: `Production availability, API access controls, or security headers failed validation in workflow run ${context.runId}.`,
+              });
+            }
