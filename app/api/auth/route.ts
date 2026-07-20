@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticate, createSession, sessions } from "@/lib/store";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/supabase/config";
+import { authorizeRevenueUser } from "@/lib/authorization";
 import { createClient } from "@/lib/supabase/server";
-import { isGoogleUser } from "@/lib/auth";
 
 const cookie = "ledgerly_session";
 
 export async function GET(request: NextRequest) {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !isGoogleUser(user))
-      return NextResponse.json({ user: null }, { status: 401 });
-    const { data: profile } = await supabase
-      .from("revenue_profiles")
-      .select("display_name, role, active")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (!profile?.active)
-      return NextResponse.json({ user: null }, { status: 403 });
+    const authorized = await authorizeRevenueUser();
+    if (!authorized) return NextResponse.json({ user: null }, { status: 403 });
     return NextResponse.json({
       user: {
-        email: user.email,
-        name: profile.display_name,
-        role: profile.role,
+        email: authorized.user.email,
+        name: authorized.name,
+        role: authorized.role,
       },
     });
   }
+
+  if (!isDemoMode)
+    return NextResponse.json(
+      { error: "Authentication is not configured" },
+      { status: 503 },
+    );
 
   const user = sessions.get(request.cookies.get(cookie)?.value ?? "");
   return user
@@ -39,6 +34,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (isSupabaseConfigured)
     return NextResponse.json({ error: "Use Google sign-in" }, { status: 405 });
+  if (!isDemoMode)
+    return NextResponse.json(
+      { error: "Authentication is not configured" },
+      { status: 503 },
+    );
   const body = await request.json().catch(() => ({}));
   const user = authenticate(
     String(body.email ?? ""),
@@ -63,6 +63,11 @@ export async function DELETE(request: NextRequest) {
     await supabase.auth.signOut();
     return NextResponse.json({ ok: true });
   }
+  if (!isDemoMode)
+    return NextResponse.json(
+      { error: "Authentication is not configured" },
+      { status: 503 },
+    );
   const token = request.cookies.get(cookie)?.value;
   if (token) sessions.delete(token);
   const response = NextResponse.json({ ok: true });

@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isGoogleUser } from "@/lib/auth";
+import { appOrigin, isGoogleUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const origin = request.nextUrl.origin;
+  const origin = appOrigin(request.url);
   if (!code) return NextResponse.redirect(`${origin}/?error=oauth`);
 
   const supabase = await createClient();

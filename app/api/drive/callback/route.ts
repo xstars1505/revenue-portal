@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { appOrigin } from "@/lib/auth";
 import { authorizeRevenueUser } from "@/lib/authorization";
 import {
   exchangeDriveCode,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/google-drive";
 
 export async function GET(request: NextRequest) {
-  const origin = request.nextUrl.origin;
+  const origin = appOrigin(request.url);
   const authorized = await authorizeRevenueUser(["admin"]);
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");

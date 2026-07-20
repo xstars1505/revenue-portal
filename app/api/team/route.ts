@@ -1,27 +1,13 @@
 import { NextResponse } from "next/server";
-import { isGoogleUser } from "@/lib/auth";
+import { appOrigin } from "@/lib/auth";
+import { authorizeRevenueUser } from "@/lib/authorization";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const roles = new Set(["admin", "finance", "viewer"]);
 
-async function authorizeAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || !isGoogleUser(user)) return false;
-  const { data: profile } = await supabase
-    .from("revenue_profiles")
-    .select("role,active")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  return profile?.active === true && profile.role === "admin";
-}
-
 export async function GET() {
-  if (!(await authorizeAdmin()))
+  if (!(await authorizeRevenueUser(["admin"])))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const admin = createAdminClient();
   const [
@@ -34,11 +20,13 @@ export async function GET() {
       .order("invited_at"),
     admin.from("revenue_profiles").select("email,display_name,active"),
   ]);
-  if (inviteError || profileError)
+  if (inviteError || profileError) {
+    console.error("Could not load team members", inviteError ?? profileError);
     return NextResponse.json(
-      { error: inviteError?.message ?? profileError?.message },
+      { error: "Could not load team members" },
       { status: 500 },
     );
+  }
   const names = new Map(
     (profiles ?? []).map((profile) => [profile.email.toLowerCase(), profile]),
   );
@@ -54,7 +42,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await authorizeAdmin()))
+  if (!(await authorizeRevenueUser(["admin"])))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => ({}));
   const role = String(body.role ?? "viewer");
@@ -84,7 +72,7 @@ export async function POST(request: Request) {
       email,
       error: (
         await admin.auth.admin.inviteUserByEmail(email, {
-          redirectTo: new URL(request.url).origin,
+          redirectTo: appOrigin(request.url),
         })
       ).error,
     })),
@@ -98,13 +86,13 @@ export async function POST(request: Request) {
       invite_emails: sent,
       invite_role: role,
     });
-    if (error)
+    if (error) {
+      console.error("Invitation access setup failed", error);
       return NextResponse.json(
-        {
-          error: `Invitation email sent, but access could not be prepared: ${error.message}`,
-        },
+        { error: "Invitation email sent, but access could not be prepared" },
         { status: 500 },
       );
+    }
   }
   if (failed.length) {
     const rateLimited = failed.some(
@@ -114,7 +102,7 @@ export async function POST(request: Request) {
     );
     const error = rateLimited
       ? `Supabase's email limit was reached. ${sent.length ? `${sent.length} invitation ${sent.length === 1 ? "was" : "were"} sent; ` : ""}${failed.length} ${failed.length === 1 ? "invitation was" : "invitations were"} not created. Configure custom SMTP or try again after the limit resets.`
-      : `${failed.length} invitation ${failed.length === 1 ? "email" : "emails"} could not be sent, so access was not granted for: ${failed.map(({ email }) => email).join(", ")}. ${failed[0].error!.message}`;
+      : `${failed.length} invitation ${failed.length === 1 ? "email" : "emails"} could not be sent, so access was not granted.`;
     return NextResponse.json(
       {
         error,
@@ -129,7 +117,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!(await authorizeAdmin()))
+  if (!(await authorizeRevenueUser(["admin"])))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const email =
     new URL(request.url).searchParams.get("email")?.trim().toLowerCase() ?? "";
@@ -141,7 +129,12 @@ export async function DELETE(request: Request) {
   const { error } = await createAdminClient().rpc("revenue_remove_user", {
     target_email: email,
   });
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 409 });
+  if (error) {
+    console.error("Could not remove team member", error);
+    return NextResponse.json(
+      { error: "The team member could not be removed" },
+      { status: 409 },
+    );
+  }
   return NextResponse.json({ removed: email });
 }
